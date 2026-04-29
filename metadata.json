@@ -1,6 +1,6 @@
 {
   "name": "Virtual Food Photographer",
-  "description": "Generate realistic, high-end food photography for restaurant menus using Gemini 3 Pro Image Preview.",
+  "description": "Generate realistic, high-end food photography for restaurant menus using Gemini 3.1 Flash Image Preview.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

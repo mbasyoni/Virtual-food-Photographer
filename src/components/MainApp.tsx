@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { GoogleGenAI, Type } from '@google/genai';
-import { Camera, Loader2, Image as ImageIcon, Settings2, Wand2, Download } from 'lucide-react';
+import { Camera, Loader2, Image as ImageIcon, Settings2, Wand2, Download, KeyRound } from 'lucide-react';
 import { Dish, PhotoStyle, ImageSize, PhotoAngle, LightingStyle } from '../types';
 
 const STYLE_PROMPTS: Record<PhotoStyle, string> = {
@@ -82,7 +82,7 @@ export function MainApp() {
       const prompt = `A realistic, high-end food photography shot of ${name}. ${description}. ${STYLE_PROMPTS[style]} ${anglePrompt}Lighting: ${activeLighting}.`;
       
       const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-image-preview',
+        model: 'gemini-3.1-flash-image-preview',
         contents: {
           parts: [{ text: prompt }],
         },
@@ -109,14 +109,31 @@ export function MainApp() {
         throw new Error("No image data returned");
       }
       
-    } catch (err) {
+    } catch (err: any) {
       console.error(`Failed to generate image for ${name}:`, err);
-      setDishes(prev => prev.map(d => d.id === id ? { ...d, status: 'error', error: "Failed to generate image" } : d));
+      let errorMessage = "Failed to generate image";
+      const errStr = err?.toString() || '';
+      
+      if (errStr.includes("429") || errStr.includes("Quota exceeded") || errStr.includes("RESOURCE_EXHAUSTED")) {
+        errorMessage = "Quota exceeded. Please select a different API key using the key icon above or try again later.";
+      } else if (errStr.includes("API_KEY_INVALID")) {
+        errorMessage = "Invalid API key. Please select a valid key.";
+      }
+      
+      setDishes(prev => prev.map(d => d.id === id ? { ...d, status: 'error', error: errorMessage } : d));
     }
   };
 
   const handleRegenerate = (dish: Dish, angle?: PhotoAngle) => {
     generateImageForDish(dish.id, dish.name, dish.description, angle || dish.angle, dish.lighting || lighting);
+  };
+
+  const handleChangeKey = async () => {
+    try {
+      await window.aistudio.openSelectKey();
+    } catch (e) {
+      console.error('Failed to change API key:', e);
+    }
   };
 
   return (
@@ -129,6 +146,14 @@ export function MainApp() {
             </div>
             <h1 className="font-serif text-[20px] italic tracking-[1px] text-accent">Virtual Food Photographer</h1>
           </div>
+          <button 
+            onClick={handleChangeKey}
+            title="Change API Key"
+            className="flex items-center gap-2 text-text-dim hover:text-accent transition-colors text-[11px] uppercase tracking-[0.1em]"
+          >
+            <KeyRound className="w-4 h-4" />
+            <span>Change Key</span>
+          </button>
         </div>
       </header>
 
@@ -332,7 +357,7 @@ export function MainApp() {
           <span className="w-1.5 h-1.5 bg-[#34C759] rounded-full shadow-[0_0_10px_rgba(52,199,89,0.4)]"></span>
           AI ENGINE: READY
         </div>
-        <div>MODEL: GEMINI-3-PRO-IMAGE</div>
+        <div>MODEL: GEMINI-3.1-FLASH-IMAGE</div>
         <div>SYSTEM LATENCY: 24MS</div>
       </footer>
     </div>
